@@ -26,11 +26,11 @@ public struct InstalledPackage {
         let links: [ManifestLink]?
         let dependencies: [String]?
     }
-
+    
     public let local: URL
     let output: Channel
     let verbose: Channel
-
+    
     public init(local: URL, output: Channel, verbose: Channel) {
         self.local = local
         self.output = output
@@ -55,7 +55,7 @@ public struct InstalledPackage {
     public func actionName(fromCommandLine arguments: [String]) -> String {
         return arguments[3]
     }
-
+    
     public func action(fromCommandLine arguments: [String]) -> Action? {
         return Action(rawValue: actionName(fromCommandLine: arguments))
     }
@@ -66,12 +66,12 @@ public struct InstalledPackage {
             return
             
         }
-
+        
         switch action {
         case .install:
             manageLinks(creating: links)
             try run(commands: commands)
-
+            
         case .remove:
             try run(commands: commands)
             manageLinks(removing: links)
@@ -104,12 +104,12 @@ public struct InstalledPackage {
      */
     
     var binURL: URL {
-//        if (global) {
-//            return URL(fileURLWithPath: "/usr/local/bin")
-//        } else {
-            let localBin = "~/.local/bin" as NSString
-            return URL(fileURLWithPath: localBin.expandingTildeInPath)
-//        }
+        //        if (global) {
+        //            return URL(fileURLWithPath: "/usr/local/bin")
+        //        } else {
+        let localBin = "~/.local/bin" as NSString
+        return URL(fileURLWithPath: localBin.expandingTildeInPath)
+        //        }
     }
     
     /**
@@ -124,8 +124,8 @@ public struct InstalledPackage {
      */
     
     public func resolve(link spec: [String]) -> (String, URL, URL) {
-        let name = spec[0]
-        let linked = local.appendingPathComponent(name)
+        let linked = local.appendingPathComponent(spec[0])
+        let name = linked.lastPathComponent
         let link = (spec.count > 1) ? URL(expandedFilePath: spec[1]) : binURL.appendingPathComponent(name)
         return (name, link, linked)
     }
@@ -144,7 +144,7 @@ public struct InstalledPackage {
             output.log("\(action) failed.\n\(error)")
         }
     }
-
+    
     /**
      Run through a list of linkSpecs and create each one.
      */
@@ -155,13 +155,25 @@ public struct InstalledPackage {
             for link in links {
                 let (name, linkURL, linkedURL) = resolve(link: link)
                 attempt(action: "Link (\(name) as \(linkURL))") {
-                    let backup = linkURL.appendingPathExtension("backup")
-                    if !fileManager.fileExists(at: backup) {
-                        if fileManager.fileExists(at: linkURL) {
-                            try fileManager.moveItem(at: linkURL, to: backup)
+                    
+                    // is there's already something where we're making a link?
+                    if fileManager.fileExists(at: linkURL) {
+                        if fileManager.fileIsSymLink(at: linkURL) {
+                            // it's a symlink, so safe to overwrite, so we remove it
+                            try? fileManager.removeItem(at: linkURL)
+                        } else {
+                            // if we've not backed it up already, do so
+                            let backup = linkURL.appendingPathExtension("backup")
+                            if !fileManager.fileExists(at: backup) {
+                                try fileManager.moveItem(at: linkURL, to: backup)
+                            }
                         }
                     }
-                    try fileManager.createDirectory(at: linkURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    
+                    // make the containing folder if it doesn't exist
+                    try? fileManager.createDirectory(at: linkURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    
+                    // make the link
                     try fileManager.createSymbolicLink(at: linkURL, withDestinationURL: linkedURL)
                 }
             }
@@ -260,5 +272,5 @@ public struct InstalledPackage {
             }
         }
     }
-
+    
 }

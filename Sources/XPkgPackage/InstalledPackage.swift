@@ -8,6 +8,11 @@ import Foundation
 import Runner
 import Logger
 
+public enum Action: String {
+    case install
+    case remove
+}
+
 public struct InstalledPackage {
     
     public typealias ManifestCommand = [String]
@@ -22,7 +27,7 @@ public struct InstalledPackage {
         let dependencies: [String]?
     }
 
-    let local: URL
+    public let local: URL
     let output: Channel
     let verbose: Channel
 
@@ -34,12 +39,11 @@ public struct InstalledPackage {
     
     public init(fromCommandLine arguments: [String]) {
         guard arguments.count > 3 else {
+            let name = URL(fileURLWithPath: arguments[0]).lastPathComponent
+            print("Usage: \(name) <package-name> <package-path> <action>")
             exit(1)
         }
         
-//        let command = arguments[0]
-//        let name = arguments[1]
-
         let localPath = arguments[2]
         let localURL = URL(fileURLWithPath: localPath)
         
@@ -48,22 +52,32 @@ public struct InstalledPackage {
         self.verbose = Channel("verbose")
     }
     
+    public func actionName(fromCommandLine arguments: [String]) -> String {
+        return arguments[3]
+    }
+
+    public func action(fromCommandLine arguments: [String]) -> Action? {
+        return Action(rawValue: actionName(fromCommandLine: arguments))
+    }
+    
     public func performAction(fromCommandLine arguments: [String], links: [ManifestLink], commands: [ManifestLink] = []) throws {
-        let action = arguments[3]
+        guard let action = action(fromCommandLine: arguments) else {
+            output.log("Unrecognised action \(actionName(fromCommandLine: arguments)).")
+            return
+            
+        }
+
         switch action {
-        case "install":
+        case .install:
             manageLinks(creating: links)
             try run(commands: commands)
 
-        case "remove":
+        case .remove:
             try run(commands: commands)
             manageLinks(removing: links)
-            
-        default:
-            output.log("Unrecognised action \(action).")
         }
-
     }
+    
     /**
      The directory to use for binary links.
      By default we use the user's local bin.
@@ -95,7 +109,12 @@ public struct InstalledPackage {
         let link = (spec.count > 1) ? URL(expandedFilePath: spec[1]) : binURL.appendingPathComponent(name)
         return (name, link, linked)
     }
-
+    
+    /// Try a block of code.
+    /// If it fails, output an error and optionally perform some cleanup.
+    /// - Parameter action: A description of the action that the block is performing.
+    /// - Parameter cleanup: A cleanup block to run on failed.
+    /// - Parameter block: The block to attempt.
     public func attempt(action: String, cleanup: (() throws -> Void)? = nil, block: () throws -> ()) {
         verbose.log(action)
         do {

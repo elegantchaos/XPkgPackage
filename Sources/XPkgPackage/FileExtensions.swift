@@ -26,5 +26,32 @@ public extension FileManager {
         }
         return false
     }
-
+    
 }
+
+#if canImport(AppKit)
+
+import AppKit
+
+public extension URL {
+    
+    func openWithWorkspace() {
+        NSWorkspace.shared.open(self)
+    }
+    
+    func revealInWorkspace() {
+        NSWorkspace.shared.activateFileViewerSelecting([self])
+    }
+}
+
+#else
+
+public extension URL {
+    func openWithWorkspace() {
+    }
+    
+    func revealInWorkspace() {
+    }
+}
+
+#endif

@@ -4,6 +4,9 @@ import PackageDescription
 
 let package = Package(
     name: "XPkgPackage",
+    platforms: [
+        .macOS(.v10_13)
+    ],
     products: [
         .library(
             name: "XPkgPackage",
@@ -16,7 +19,7 @@ let package = Package(
     targets: [
         .target(
             name: "XPkgPackage",
-            dependencies: ["Runner"]),
+            dependencies: ["Runner", "Logger"]),
         .testTarget(
             name: "XPkgPackageTests",
             dependencies: ["XPkgPackage"]),

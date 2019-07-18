@@ -30,6 +30,7 @@ VersionX-revision.h
 
 # build products
 build/
+.build/
 *.o
 
 # Other source repository archive directories (protects when importing)

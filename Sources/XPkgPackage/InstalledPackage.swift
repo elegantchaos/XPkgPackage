@@ -78,6 +78,26 @@ public struct InstalledPackage {
         }
     }
     
+    public func output(_ message: String) {
+        self.output.log(message)
+    }
+    
+    public func verbose(_ message: String) {
+        self.verbose.log(message)
+    }
+    
+    public func error(_ message: String, _ error: Error?) {
+        self.output.log(message)
+        if let error = error {
+            self.verbose.log(error)
+        }
+    }
+    
+    public func fail(_ message: String, code: Int32) -> Never {
+        self.output.log(message)
+        exit(code)
+    }
+    
     /**
      The directory to use for binary links.
      By default we use the user's local bin.

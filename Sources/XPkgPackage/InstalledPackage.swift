@@ -158,16 +158,16 @@ public struct InstalledPackage {
                     
                     // is there's already something where we're making a link?
                     if fileManager.fileExists(at: linkURL) {
-                        if fileManager.fileIsSymLink(at: linkURL) {
-                            // it's a symlink, so safe to overwrite, so we remove it
-                            try? fileManager.removeItem(at: linkURL)
-                        } else {
+                        if !fileManager.fileIsSymLink(at: linkURL) {
                             // if we've not backed it up already, do so
                             let backup = linkURL.appendingPathExtension("backup")
                             if !fileManager.fileExists(at: backup) {
                                 try fileManager.moveItem(at: linkURL, to: backup)
                             }
                         }
+
+                        // it's a symlink, or backed up, so hopefully safe to overwrite
+                        try? fileManager.removeItem(at: linkURL)
                     }
                     
                     // make the containing folder if it doesn't exist

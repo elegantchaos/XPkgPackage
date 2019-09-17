@@ -14,7 +14,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/elegantchaos/Logger.git", from: "1.3.7"),
-        .package(url: "https://github.com/elegantchaos/Runner.git", from: "1.0.1"),
+        .package(url: "https://github.com/elegantchaos/Runner.git", from: "1.0.3"),
     ],
     targets: [
         .target(

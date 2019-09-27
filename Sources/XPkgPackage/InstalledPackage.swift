@@ -124,7 +124,10 @@ public struct InstalledPackage {
      */
     
     public func resolve(link spec: [String]) -> (String, URL, URL) {
-        let linked = local.appendingPathComponent(spec[0])
+        var linked = local.appendingPathComponent(spec[0])
+        if !FileManager.default.fileExists(at: linked) {
+           linked = URL(expandedFilePath: spec[0])
+        }
         let name = linked.lastPathComponent
         let link = (spec.count > 1) ? URL(expandedFilePath: spec[1]) : binURL.appendingPathComponent(name)
         return (name, link, linked)
@@ -157,13 +160,13 @@ public struct InstalledPackage {
                 attempt(action: "Link (\(name) as \(linkURL))") {
                     
                     // is there's already something where we're making a link?
-                    if fileManager.fileExists(at: linkURL) {
-                        if !fileManager.fileIsSymLink(at: linkURL) {
-                            // if we've not backed it up already, do so
-                            let backup = linkURL.appendingPathExtension("backup")
-                            if !fileManager.fileExists(at: backup) {
-                                try fileManager.moveItem(at: linkURL, to: backup)
-                            }
+                    let fileExists = fileManager.fileExists(at: linkURL)
+                    let fileIsSymlink = fileManager.fileIsSymLink(at: linkURL)
+                    if fileExists || fileIsSymlink {
+                        // if we've not backed it up already, do so
+                        let backup = linkURL.appendingPathExtension("backup")
+                        if !(fileManager.fileExists(at: backup) || fileManager.fileIsSymLink(at: backup)) {
+                            try fileManager.moveItem(at: linkURL, to: backup)
                         }
 
                         // it's a symlink, or backed up, so hopefully safe to overwrite
@@ -266,7 +269,9 @@ public struct InstalledPackage {
                     switch(tool) {
                     case "link":    manageLinks(creating: [arguments])
                     case "unlink":  manageLinks(removing: [arguments])
-                    default:        try external(command: tool, arguments: arguments)
+                    default:
+                        print("running \(tool)")
+                        try external(command: tool, arguments: arguments)
                     }
                 }
             }

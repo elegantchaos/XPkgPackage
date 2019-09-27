@@ -118,7 +118,8 @@ public struct InstalledPackage {
      
      If only the localPath is suppled, the link is created in the bin folder (either
      ~/.local/bin or /usr/local/bin, depending on which mode we're in), using the same
-     name as the file it's linking to.
+     name as the file it's linking to. In this case we also strip off any extension, so
+     a linked file `blah.sh` becomes just `blah` in the bin folder.
      
      If both paths are supplied, we expand ~ etc in the link file path.
      */
@@ -129,8 +130,16 @@ public struct InstalledPackage {
            linked = URL(expandedFilePath: spec[0])
         }
         let name = linked.lastPathComponent
-        let link = (spec.count > 1) ? URL(expandedFilePath: spec[1]) : binURL.appendingPathComponent(name)
-        return (name, link, linked)
+        let link: URL
+        
+        if spec.count == 1 {
+            link = binURL.appendingPathComponent(name).deletingPathExtension()
+        } else {
+            link = URL(expandedFilePath: spec[1])
+        }
+        let resolved = (name, link, linked)
+        print("resolved \(spec) as \(resolved)")
+        return resolved
     }
     
     /// Try a block of code.

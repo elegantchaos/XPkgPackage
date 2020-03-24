@@ -1,4 +1,4 @@
-// swift-tools-version:5.1
+// swift-tools-version:5.0
 
 import PackageDescription
 
@@ -14,7 +14,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/elegantchaos/Logger.git", from: "1.5.3"),
-        .package(url: "https://github.com/elegantchaos/Runner.git", from: "1.0.5"),
+        .package(url: "https://github.com/elegantchaos/Runner.git", from: "1.1.0"),
     ],
     targets: [
         .target(

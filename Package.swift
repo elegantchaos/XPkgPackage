@@ -13,8 +13,8 @@ let package = Package(
             targets: ["XPkgPackage"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/elegantchaos/Logger.git", from: "1.3.7"),
-        .package(url: "https://github.com/elegantchaos/Runner.git", from: "1.0.3"),
+        .package(url: "https://github.com/elegantchaos/Logger.git", from: "1.5.3"),
+        .package(url: "https://github.com/elegantchaos/Runner.git", from: "1.0.5"),
     ],
     targets: [
         .target(

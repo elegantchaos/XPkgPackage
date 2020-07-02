@@ -232,7 +232,7 @@ public struct InstalledPackage {
         }
         
         let runner = Runner(for: executable, cwd: local)
-        let result = try runner.sync(arguments: args)
+        let result = try runner.sync(arguments: args, stdoutMode: .passthrough)
         if result.status == 0 {
             output.log(result.stdout)
         } else {

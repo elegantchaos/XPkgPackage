@@ -138,7 +138,7 @@ public struct InstalledPackage {
             link = URL(expandedFilePath: spec[1])
         }
         let resolved = (name, link, linked)
-        print("resolved \(spec) as \(resolved)")
+        verbose.log("resolved \(spec) as \(resolved)")
         return resolved
     }
     
@@ -279,7 +279,7 @@ public struct InstalledPackage {
                     case "link":    manageLinks(creating: [arguments])
                     case "unlink":  manageLinks(removing: [arguments])
                     default:
-                        print("running \(tool)")
+                        verbose.log("running \(tool)")
                         try external(command: tool, arguments: arguments)
                     }
                 }

@@ -82,6 +82,8 @@ jobs:
     macOS-swift-53:
         name: macOS (Swift 5.3 Nightly)
         runs-on: macOS-latest
+        env:
+            TOOLCHAINS: swift
         steps:
         - name: Checkout
           uses: actions/checkout@v1
@@ -99,11 +101,12 @@ jobs:
             wget --quiet https://swift.org/builds/$branch/xcode/$downloadYML/$downloadYML-osx.pkg
             sudo installer -pkg $downloadYML-osx.pkg -target /
             ln -s "/Library/Developer/Toolchains/$downloadYML.xctoolchain/usr/bin" swift-latest
-            export PATH="swift-latest:$PATH"
+            sudo xcode-select -s /Applications/Xcode_12_beta.app
+            swift --version
         - name: Xcode Version
           run: |
             xcodebuild -version
-            swift --version
+            xcrun swift --version
         - name: Swift Version
           run: swift --version
         - name: Build (Release)
@@ -129,6 +132,8 @@ jobs:
     macOS-swift-nightly:
         name: macOS (Swift Development Nightly)
         runs-on: macOS-latest
+        env:
+            TOOLCHAINS: swift
         steps:
         - name: Checkout
           uses: actions/checkout@v1
@@ -146,11 +151,12 @@ jobs:
             wget --quiet https://swift.org/builds/$branch/xcode/$downloadYML/$downloadYML-osx.pkg
             sudo installer -pkg $downloadYML-osx.pkg -target /
             ln -s "/Library/Developer/Toolchains/$downloadYML.xctoolchain/usr/bin" swift-latest
-            export PATH="swift-latest:$PATH"
+            sudo xcode-select -s /Applications/Xcode_12_beta.app
+            swift --version
         - name: Xcode Version
           run: |
             xcodebuild -version
-            swift --version
+            xcrun swift --version
         - name: Swift Version
           run: swift --version
         - name: Build (Release)

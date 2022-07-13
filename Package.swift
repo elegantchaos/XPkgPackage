@@ -1,4 +1,4 @@
-// swift-tools-version:5.1
+// swift-tools-version:5.6
 
 import PackageDescription
 
@@ -13,8 +13,8 @@ let package = Package(
             targets: ["XPkgPackage"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/elegantchaos/Logger.git", from: "1.5.5"),
-        .package(url: "https://github.com/elegantchaos/Runner.git", from: "1.3.0")
+        .package(url: "https://github.com/elegantchaos/Logger.git", from: "1.7.4"),
+        .package(url: "https://github.com/elegantchaos/Runner.git", from: "1.3.2")
     ],
     targets: [
         .target(
@@ -25,3 +25,10 @@ let package = Package(
             dependencies: ["XPkgPackage"]),
     ]
 )
+
+import Foundation
+if ProcessInfo.processInfo.environment["RESOLVE_COMMAND_PLUGINS"] != nil {
+    package.dependencies.append(
+        .package(url: "https://github.com/elegantchaos/SwiftFormatterPlugin.git", from: "1.0.1")
+    )
+}

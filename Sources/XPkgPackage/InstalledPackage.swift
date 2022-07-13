@@ -13,8 +13,6 @@ public enum Action: String {
     case remove
 }
 
-
-
 public struct InstalledPackage {
     
     public typealias ManifestCommand = [String]
@@ -106,29 +104,6 @@ public struct InstalledPackage {
         //        }
     }
     
-    /**
-     Given a link specifier in the form: [localPath]. or [localPath, linkPath],
-     return a triple: (localName, linkURL, localURL).
-     
-     If only the localPath is suppled, the link is created in the bin folder (either
-     ~/.local/bin or /usr/local/bin, depending on which mode we're in), using the same
-     name as the file it's linking to. In this case we also strip off any extension, so
-     a linked file `blah.sh` becomes just `blah` in the bin folder.
-     
-     If both paths are supplied, we expand ~ etc in the link file path.
-     */
-    
-    public func resolve(link spec: ManifestLink) -> (String, URL, URL) {
-        var linked = local.appendingPathComponent(spec.source)
-        if !FileManager.default.fileExists(at: linked) {
-            linked = URL(expandedFilePath: spec.source)
-        }
-        let name = linked.lastPathComponent
-        let link = spec.destination.map { URL(expandedFilePath: $0) } ?? binURL.appendingPathComponent(name).deletingPathExtension()
-        let resolved = (name, link, linked)
-        verbose.log("resolved \(spec) as \(resolved)")
-        return resolved
-    }
     
     /// Try a block of code.
     /// If it fails, output an error and optionally perform some cleanup.
@@ -153,28 +128,28 @@ public struct InstalledPackage {
         let fileManager = FileManager.default
         if let links = links {
             for link in links {
-                let (name, linkURL, linkedURL) = resolve(link: link)
-                attempt(action: "Link (\(name) as \(linkURL))") {
+                let resolved = link.resolve(package: self)
+                attempt(action: "Link (\(resolved.name) as \(resolved.destination))") {
                     
                     // is there's already something where we're making a link?
-                    let fileExists = fileManager.fileExists(at: linkURL)
-                    let fileIsSymlink = fileManager.fileIsSymLink(at: linkURL)
+                    let fileExists = fileManager.fileExists(at: resolved.destination)
+                    let fileIsSymlink = fileManager.fileIsSymLink(at: resolved.destination)
                     if fileExists || fileIsSymlink {
                         // if we've not backed it up already, do so
-                        let backup = linkURL.appendingPathExtension("backup")
+                        let backup = resolved.destination.appendingPathExtension("backup")
                         if !(fileManager.fileExists(at: backup) || fileManager.fileIsSymLink(at: backup)) {
-                            try fileManager.moveItem(at: linkURL, to: backup)
+                            try fileManager.moveItem(at: resolved.destination, to: backup)
                         }
 
                         // it's a symlink, or backed up, so hopefully safe to overwrite
-                        try? fileManager.removeItem(at: linkURL)
+                        try? fileManager.removeItem(at: resolved.destination)
                     }
                     
                     // make the containing folder if it doesn't exist
-                    try? fileManager.createDirectory(at: linkURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try? fileManager.createDirectory(at: resolved.destination.deletingLastPathComponent(), withIntermediateDirectories: true)
                     
                     // make the link
-                    try fileManager.createSymbolicLink(at: linkURL, withDestinationURL: linkedURL)
+                    try fileManager.createSymbolicLink(at: resolved.destination, withDestinationURL: resolved.source)
                 }
             }
         }
@@ -188,13 +163,13 @@ public struct InstalledPackage {
         let fileManager = FileManager.default
         if let links = links {
             for link in links {
-                let (_, linkURL, _) = resolve(link: link)
-                attempt(action: "Unlink \(linkURL)") {
-                    if fileManager.fileIsSymLink(at: linkURL) {
-                        try fileManager.removeItem(at: linkURL)
-                        let backup = linkURL.appendingPathExtension("backup")
+                let resolved = link.resolve(package: self)
+                attempt(action: "Unlink \(resolved.destination)") {
+                    if fileManager.fileIsSymLink(at: resolved.destination) {
+                        try fileManager.removeItem(at: resolved.destination)
+                        let backup = resolved.destination.appendingPathExtension("backup")
                         if fileManager.fileExists(at: backup) {
-                            try fileManager.moveItem(at: backup, to: linkURL)
+                            try fileManager.moveItem(at: backup, to: resolved.destination)
                         }
                     }
                 }

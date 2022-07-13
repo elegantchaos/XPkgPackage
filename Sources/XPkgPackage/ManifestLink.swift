@@ -23,20 +23,39 @@ public struct ManifestLink {
         Self(source: source, destination: destination)
     }
 
-    public static func script(_ name: String, ext: String? = nil, to destination: String? = nil) -> Self {
-        let extStr = ext.map { ".\($0)" } ?? ""
-        return Self(source: "Scripts/\(name)\(extStr)", destination: destination)
+    public static func script(_ name: String, ext: String = "sh", to destination: String? = nil) -> Self {
+        return Self(source: "Scripts/\(name)\(ext.isEmpty ? "" : ".\(ext)")", destination: destination)
     }
 
     public static func function(_ name: String) -> Self {
         Self(source: "Fish/Functions/\(name).fish", destination: "~/.config/fish/functions/\(name).fish")
     }
+    
+    /**
+     Resolve a link.
+     
+     If only the source is suppled, the link is created in the bin folder (either
+     ~/.local/bin or /usr/local/bin, depending on which mode we're in), using the same
+     name as the file it's linking to. In this case we also strip off any extension, so
+     a linked file `blah.sh` becomes just `blah` in the bin folder.
+     
+     By default we assume that the source path is local to the package. If it doesn't exist
+     there, we try treating it as absolute and expanding ~ etc.
+     
+     If the destination path is supplied, we treat it as absolute, and expand ~ etc in it.
+     */
+
+    public func resolve(package: InstalledPackage) -> ResolvedLink {
+        var linked = package.local.appendingPathComponent(source)
+        if !FileManager.default.fileExists(at: linked) {
+            linked = URL(expandedFilePath: source)
+        }
+
+        let name = linked.lastPathComponent
+        let link = destination.map { URL(expandedFilePath: $0) } ?? package.binURL.appendingPathComponent(name).deletingPathExtension()
+        let resolved = ResolvedLink(name: name, source: linked, destination: link)
+        package.verbose.log("resolved \(self) as \(resolved)")
+        return resolved
+
+    }
 }
-//
-//
-//extension ManifestLink: ExpressibleByArrayLiteral {
-//    public init(arrayLiteral elements: String...) {
-//        self.source = elements.first!
-//        self.destination = elements.count > 1 ? elements.last : nil
-//    }
-//}

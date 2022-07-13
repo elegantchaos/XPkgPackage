@@ -15,9 +15,9 @@ public extension URL {
 
 public extension FileManager {
     func fileExists(at url: URL) -> Bool {
-        return fileExists(atPath: url.path)
+        fileExists(atPath: url.path)
     }
-    
+
     func fileIsSymLink(at url: URL) -> Bool {
         if let attributes = try? attributesOfItem(atPath: url.path) {
             if let type = attributes[FileAttributeKey.type] as? FileAttributeType {
@@ -26,7 +26,6 @@ public extension FileManager {
         }
         return false
     }
-    
 }
 
 #if canImport(AppKit)
@@ -34,11 +33,10 @@ public extension FileManager {
 import AppKit
 
 public extension URL {
-    
     func openWithWorkspace() {
         NSWorkspace.shared.open(self)
     }
-    
+
     func revealInWorkspace() {
         NSWorkspace.shared.activateFileViewerSelecting([self])
     }
@@ -47,11 +45,9 @@ public extension URL {
 #else
 
 public extension URL {
-    func openWithWorkspace() {
-    }
-    
-    func revealInWorkspace() {
-    }
+    func openWithWorkspace() {}
+
+    func revealInWorkspace() {}
 }
 
 #endif

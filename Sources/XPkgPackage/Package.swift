@@ -1,38 +1,25 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-// Created by Sam Deane, 20/06/2018.
-// All code (c) 2018 - present day, Elegant Chaos Limited.
-// For licensing terms, see http://elegantchaos.com/license/liberal/.
+//  Created by Sam Deane on 13/07/22.
+//  All code (c) 2022 - present day, Elegant Chaos Limited.
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 import Foundation
 import Runner
 import Logger
 
-public struct InstalledPackage {
+
+public struct Package {
     
     public typealias ManifestCommand = [String]
-    public typealias ManifestLink = [String]
-    
-    struct Manifest: Codable {
-        let install: [ManifestCommand]?
-        let remove: [ManifestCommand]?
-        let updating: [ManifestCommand]?
-        let updated: [ManifestCommand]?
-        let links: [ManifestLink]?
-        let dependencies: [String]?
-    }
+    public typealias FishFunction = String
+    public typealias FishFunctions = [FishFunction]
     
     public let local: URL
     let output: Channel
     let verbose: Channel
+    let arguments: [String]
     
-    public init(local: URL, output: Channel, verbose: Channel) {
-        self.local = local
-        self.output = output
-        self.verbose = verbose
-    }
-    
-    public init(fromCommandLine arguments: [String]) {
+    public init(arguments: [String] = CommandLine.arguments) {
         guard arguments.count > 3 else {
             let name = URL(fileURLWithPath: arguments[0]).lastPathComponent
             print("Usage: \(name) <package-name> <package-path> <action>")
@@ -45,32 +32,35 @@ public struct InstalledPackage {
         self.local = localURL
         self.output = Logger.stdout
         self.verbose = Channel("verbose")
+        self.arguments = arguments
     }
     
-    public func actionName(fromCommandLine arguments: [String]) -> String {
+    public var actionName: String {
         return arguments[3]
     }
     
-    public func action(fromCommandLine arguments: [String]) -> Action? {
-        return Action(rawValue: actionName(fromCommandLine: arguments))
+    public var action: Action? {
+        return Action(rawValue: actionName)
     }
     
-    public func performAction(fromCommandLine arguments: [String], links: [ManifestLink], commands: [ManifestLink] = []) throws {
-        guard let action = action(fromCommandLine: arguments) else {
-            output.log("Unrecognised action \(actionName(fromCommandLine: arguments)).")
-            return
+    @discardableResult public func run(links: [ManifestLink], commands: [ManifestCommand] = []) throws -> Action {
+        guard let action = action else {
+            output.log("Unrecognised action \(actionName).")
+            throw PackageError.unknownCommand
             
         }
         
         switch action {
-        case .install:
-            manageLinks(creating: links)
-            try run(commands: commands)
-            
-        case .remove:
-            try run(commands: commands)
-            manageLinks(removing: links)
+            case .install:
+                manageLinks(creating: links)
+                try perform(commands: commands)
+                
+            case .remove:
+                try perform(commands: commands)
+                manageLinks(removing: links)
         }
+        
+        return action
     }
     
     public func output(_ message: String) {
@@ -122,7 +112,7 @@ public struct InstalledPackage {
     public func resolve(link spec: [String]) -> (String, URL, URL) {
         var linked = local.appendingPathComponent(spec[0])
         if !FileManager.default.fileExists(at: linked) {
-           linked = URL(expandedFilePath: spec[0])
+            linked = URL(expandedFilePath: spec[0])
         }
         let name = linked.lastPathComponent
         let link: URL
@@ -160,28 +150,28 @@ public struct InstalledPackage {
         let fileManager = FileManager.default
         if let links = links {
             for link in links {
-                let (name, linkURL, linkedURL) = resolve(link: link)
-                attempt(action: "Link (\(name) as \(linkURL))") {
+                let resolved = link.resolve(package: self)
+                attempt(action: "Link (\(resolved.name) as \(resolved.destination))") {
                     
                     // is there's already something where we're making a link?
-                    let fileExists = fileManager.fileExists(at: linkURL)
-                    let fileIsSymlink = fileManager.fileIsSymLink(at: linkURL)
+                    let fileExists = fileManager.fileExists(at: resolved.destination)
+                    let fileIsSymlink = fileManager.fileIsSymLink(at: resolved.destination)
                     if fileExists || fileIsSymlink {
                         // if we've not backed it up already, do so
-                        let backup = linkURL.appendingPathExtension("backup")
+                        let backup = resolved.destination.appendingPathExtension("backup")
                         if !(fileManager.fileExists(at: backup) || fileManager.fileIsSymLink(at: backup)) {
-                            try fileManager.moveItem(at: linkURL, to: backup)
+                            try fileManager.moveItem(at: resolved.destination, to: backup)
                         }
-
+                        
                         // it's a symlink, or backed up, so hopefully safe to overwrite
-                        try? fileManager.removeItem(at: linkURL)
+                        try? fileManager.removeItem(at: resolved.destination)
                     }
                     
                     // make the containing folder if it doesn't exist
-                    try? fileManager.createDirectory(at: linkURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try? fileManager.createDirectory(at: resolved.destination.deletingLastPathComponent(), withIntermediateDirectories: true)
                     
                     // make the link
-                    try fileManager.createSymbolicLink(at: linkURL, withDestinationURL: linkedURL)
+                    try fileManager.createSymbolicLink(at: resolved.destination, withDestinationURL: resolved.source)
                 }
             }
         }
@@ -195,13 +185,13 @@ public struct InstalledPackage {
         let fileManager = FileManager.default
         if let links = links {
             for link in links {
-                let (_, linkURL, _) = resolve(link: link)
-                attempt(action: "Unlink \(linkURL)") {
-                    if fileManager.fileIsSymLink(at: linkURL) {
-                        try fileManager.removeItem(at: linkURL)
-                        let backup = linkURL.appendingPathExtension("backup")
+                let resolved = link.resolve(package: self)
+                attempt(action: "Unlink \(resolved.destination)") {
+                    if fileManager.fileIsSymLink(at: resolved.destination) {
+                        try fileManager.removeItem(at: resolved.destination)
+                        let backup = resolved.destination.appendingPathExtension("backup")
                         if fileManager.fileExists(at: backup) {
-                            try fileManager.moveItem(at: backup, to: linkURL)
+                            try fileManager.moveItem(at: backup, to: resolved.destination)
                         }
                     }
                 }
@@ -237,45 +227,21 @@ public struct InstalledPackage {
     
     
     /**
-     Run commands listed in the .xpkg file for a given action.
-     */
-    
-    public func run(legacyAction action: String, config url: URL) throws {
-        let decoder = JSONDecoder()
-        if let manifest = try? decoder.decode(Manifest.self, from: Data(contentsOf: url)) {
-            switch (action) {
-            case "install":
-                manageLinks(creating: manifest.links)
-                try run(commands: manifest.install)
-                
-            case "remove":
-                try run(commands: manifest.remove)
-                manageLinks(removing: manifest.links)
-                
-            default:
-                output.log("Unknown action \(action).")
-            }
-        } else {
-            output.log("Couldn't decode manifest.")
-        }
-    }
-    
-    /**
      Run a list of commands.
      */
     
-    public func run(commands: [ManifestCommand]?) throws {
+    public func perform(commands: [ManifestCommand]?) throws {
         if let commands = commands {
             for command in commands {
                 if command.count > 0 {
                     let tool = command[0]
                     let arguments = Array(command.dropFirst())
                     switch(tool) {
-                    case "link":    manageLinks(creating: [arguments])
-                    case "unlink":  manageLinks(removing: [arguments])
-                    default:
-                        verbose.log("running \(tool)")
-                        try external(command: tool, arguments: arguments)
+                        case "link":    manageLinks(creating: [ManifestLink(arguments)])
+                        case "unlink":  manageLinks(removing: [ManifestLink(arguments)])
+                        default:
+                            verbose.log("running \(tool)")
+                            try external(command: tool, arguments: arguments)
                     }
                 }
             }

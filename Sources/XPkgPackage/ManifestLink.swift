@@ -45,7 +45,7 @@ public struct ManifestLink {
      If the destination path is supplied, we treat it as absolute, and expand ~ etc in it.
      */
 
-    public func resolve(package: InstalledPackage) -> ResolvedLink {
+    public func resolve(package: Package) -> ResolvedLink {
         var linked = package.local.appendingPathComponent(source)
         if !FileManager.default.fileExists(at: linked) {
             linked = URL(expandedFilePath: source)

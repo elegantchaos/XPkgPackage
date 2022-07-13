@@ -13,21 +13,13 @@ public enum Action: String {
     case remove
 }
 
+
+
 public struct InstalledPackage {
     
     public typealias ManifestCommand = [String]
-    public typealias ManifestLink = [String]
     public typealias FishFunction = String
     public typealias FishFunctions = [FishFunction]
-    
-    struct Manifest: Codable {
-        let install: [ManifestCommand]?
-        let remove: [ManifestCommand]?
-        let updating: [ManifestCommand]?
-        let updated: [ManifestCommand]?
-        let links: [ManifestLink]?
-        let dependencies: [String]?
-    }
     
     public let local: URL
     let output: Channel
@@ -62,26 +54,21 @@ public struct InstalledPackage {
         return Action(rawValue: actionName(fromCommandLine: arguments))
     }
     
-    public func performAction(fromCommandLine arguments: [String], links: [ManifestLink], commands: [ManifestLink] = [], functions: FishFunctions = []) throws {
+    public func performAction(fromCommandLine arguments: [String], links: [ManifestLink], commands: [ManifestCommand] = []) throws {
         guard let action = action(fromCommandLine: arguments) else {
             output.log("Unrecognised action \(actionName(fromCommandLine: arguments)).")
             return
             
         }
         
-        var expandedLinks = links
-        for function in functions {
-            expandedLinks.append(["Fish/Functions/\(function).fish", "~/.config/fish/functions/\(function).fish"])
-        }
-
         switch action {
         case .install:
-            manageLinks(creating: expandedLinks)
+            manageLinks(creating: links)
             try run(commands: commands)
             
         case .remove:
             try run(commands: commands)
-            manageLinks(removing: expandedLinks)
+            manageLinks(removing: links)
         }
     }
     
@@ -131,19 +118,13 @@ public struct InstalledPackage {
      If both paths are supplied, we expand ~ etc in the link file path.
      */
     
-    public func resolve(link spec: [String]) -> (String, URL, URL) {
-        var linked = local.appendingPathComponent(spec[0])
+    public func resolve(link spec: ManifestLink) -> (String, URL, URL) {
+        var linked = local.appendingPathComponent(spec.source)
         if !FileManager.default.fileExists(at: linked) {
-           linked = URL(expandedFilePath: spec[0])
+            linked = URL(expandedFilePath: spec.source)
         }
         let name = linked.lastPathComponent
-        let link: URL
-        
-        if spec.count == 1 {
-            link = binURL.appendingPathComponent(name).deletingPathExtension()
-        } else {
-            link = URL(expandedFilePath: spec[1])
-        }
+        let link = spec.destination.map { URL(expandedFilePath: $0) } ?? binURL.appendingPathComponent(name).deletingPathExtension()
         let resolved = (name, link, linked)
         verbose.log("resolved \(spec) as \(resolved)")
         return resolved
@@ -247,31 +228,7 @@ public struct InstalledPackage {
         }
     }
     
-    
-    /**
-     Run commands listed in the .xpkg file for a given action.
-     */
-    
-    public func run(legacyAction action: String, config url: URL) throws {
-        let decoder = JSONDecoder()
-        if let manifest = try? decoder.decode(Manifest.self, from: Data(contentsOf: url)) {
-            switch (action) {
-            case "install":
-                manageLinks(creating: manifest.links)
-                try run(commands: manifest.install)
-                
-            case "remove":
-                try run(commands: manifest.remove)
-                manageLinks(removing: manifest.links)
-                
-            default:
-                output.log("Unknown action \(action).")
-            }
-        } else {
-            output.log("Couldn't decode manifest.")
-        }
-    }
-    
+        
     /**
      Run a list of commands.
      */
@@ -283,8 +240,8 @@ public struct InstalledPackage {
                     let tool = command[0]
                     let arguments = Array(command.dropFirst())
                     switch(tool) {
-                    case "link":    manageLinks(creating: [arguments])
-                    case "unlink":  manageLinks(removing: [arguments])
+                    case "link":    manageLinks(creating: [ManifestLink(arguments)])
+                    case "unlink":  manageLinks(removing: [ManifestLink(arguments)])
                     default:
                         verbose.log("running \(tool)")
                         try external(command: tool, arguments: arguments)

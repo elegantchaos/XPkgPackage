@@ -17,6 +17,8 @@ public struct InstalledPackage {
     
     public typealias ManifestCommand = [String]
     public typealias ManifestLink = [String]
+    public typealias FishFunction = String
+    public typealias FishFunctions = [FishFunction]
     
     struct Manifest: Codable {
         let install: [ManifestCommand]?
@@ -60,21 +62,26 @@ public struct InstalledPackage {
         return Action(rawValue: actionName(fromCommandLine: arguments))
     }
     
-    public func performAction(fromCommandLine arguments: [String], links: [ManifestLink], commands: [ManifestLink] = []) throws {
+    public func performAction(fromCommandLine arguments: [String], links: [ManifestLink], commands: [ManifestLink] = [], functions: FishFunctions = []) throws {
         guard let action = action(fromCommandLine: arguments) else {
             output.log("Unrecognised action \(actionName(fromCommandLine: arguments)).")
             return
             
         }
         
+        var expandedLinks = links
+        for function in functions {
+            expandedLinks.append(["Fish/Functions/\(function).fish", "~/.config/fish/functions/\(function).fish"])
+        }
+
         switch action {
         case .install:
-            manageLinks(creating: links)
+            manageLinks(creating: expandedLinks)
             try run(commands: commands)
             
         case .remove:
             try run(commands: commands)
-            manageLinks(removing: links)
+            manageLinks(removing: expandedLinks)
         }
     }
     

@@ -1,6 +1,24 @@
 {
   "pins" : [
     {
+      "identity" : "actionbuildercore",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/elegantchaos/ActionBuilderCore",
+      "state" : {
+        "revision" : "d0fe8bfeb14f485cc754933aaf31f9d6afdfc40a",
+        "version" : "1.0.9"
+      }
+    },
+    {
+      "identity" : "actionbuilderplugin",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/elegantchaos/ActionBuilderPlugin.git",
+      "state" : {
+        "revision" : "891d7e54ef8fb99da0c1eb706cfe44c3767adcb0",
+        "version" : "1.0.7"
+      }
+    },
+    {
       "identity" : "logger",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/elegantchaos/Logger.git",
@@ -19,12 +37,21 @@
       }
     },
     {
+      "identity" : "semanticversion",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/elegantchaos/SemanticVersion",
+      "state" : {
+        "revision" : "6bda5a45a2f687a82a0fbb002bee8ad31e44f478",
+        "version" : "1.1.0"
+      }
+    },
+    {
       "identity" : "swiftformat",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/nicklockwood/SwiftFormat",
       "state" : {
-        "revision" : "378543f07b6acf6e13982ffed8bd71d4b0041f61",
-        "version" : "0.49.11"
+        "revision" : "665c3c58923ee8ac36d3e44b17dc185229cce301",
+        "version" : "0.49.13"
       }
     },
     {
@@ -32,8 +59,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/elegantchaos/SwiftFormatterPlugin.git",
       "state" : {
-        "revision" : "b8f1aef14acb2b8f0e07ea97bfeb10b046d03cde",
-        "version" : "1.0.2"
+        "revision" : "53d24a9c47d53f9c67c630e7e23fb50b8b442dd2",
+        "version" : "1.0.3"
       }
     },
     {

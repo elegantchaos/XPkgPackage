@@ -67,6 +67,16 @@ public struct Package {
         }
     }
 
+    public func output<S: CustomStringConvertible>(_ object: S) {
+        print(object.description)
+    }
+
+    public func verbose<S: CustomStringConvertible>(_ object: S) {
+        if verboseEnabled {
+            print(object.description)
+        }
+    }
+
     public func error(_ message: String, _ error: Error?) {
         output(message)
         if let error = error {
@@ -147,7 +157,7 @@ public struct Package {
         if let links = links {
             for link in links {
                 let resolved = link.resolve(package: self)
-                attempt(action: "Link (\(resolved.name) as \(resolved.destination))") {
+                attempt(action: "Link \(resolved)") {
                     // is there's already something where we're making a link?
                     let fileExists = fileManager.fileExists(at: resolved.destination)
                     let fileIsSymlink = fileManager.fileIsSymLink(at: resolved.destination)
@@ -181,7 +191,7 @@ public struct Package {
         if let links = links {
             for link in links {
                 let resolved = link.resolve(package: self)
-                attempt(action: "Unlink \(resolved.destination)") {
+                attempt(action: "Unlink \(resolved)") {
                     if fileManager.fileIsSymLink(at: resolved.destination) {
                         try fileManager.removeItem(at: resolved.destination)
                         let backup = resolved.destination.appendingPathExtension("backup")

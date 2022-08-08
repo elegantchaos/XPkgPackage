@@ -10,3 +10,9 @@ public struct ResolvedLink {
     let source: URL
     let destination: URL
 }
+
+extension ResolvedLink: CustomStringConvertible {
+    public var description: String {
+        return "\(name): \(source.path) -> \(destination.path)"
+    }
+}

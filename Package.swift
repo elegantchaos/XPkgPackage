@@ -17,19 +17,13 @@ let package = Package(
     ],
 
     dependencies: [
-        .package(url: "https://github.com/elegantchaos/Logger.git", from: "1.8.0"),
         .package(url: "https://github.com/elegantchaos/Runner.git", from: "1.3.2"),
-        
-        // tools
-        .package(url: "https://github.com/elegantchaos/ActionBuilderPlugin.git", from: "1.0.2"),
-        .package(url: "https://github.com/elegantchaos/SwiftFormatterPlugin.git", from: "1.0.2")
-
     ],
     
     targets: [
         .target(
             name: "XPkgPackage",
-            dependencies: ["Runner", "Logger"]
+            dependencies: ["Runner"]
         ),
         
         .testTarget(
@@ -42,3 +36,11 @@ let package = Package(
         .v5
     ]
 )
+
+import Foundation
+if ProcessInfo.processInfo.environment["RESOLVE_COMMAND_PLUGINS"] != nil {
+    package.dependencies.append(contentsOf: [
+        .package(url: "https://github.com/elegantchaos/ActionBuilderPlugin.git", from: "1.0.2"),
+        .package(url: "https://github.com/elegantchaos/SwiftFormatterPlugin.git", from: "1.0.2")
+    ])
+}

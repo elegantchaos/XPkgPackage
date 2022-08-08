@@ -5,7 +5,6 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 import Foundation
-import Logger
 import Runner
 
 public struct InstalledPackage {
@@ -22,13 +21,11 @@ public struct InstalledPackage {
     }
 
     public let local: URL
-    let output: Channel
-    let verbose: Channel
+    let verboseEnabled: Bool
 
-    public init(local: URL, output: Channel, verbose: Channel) {
+    public init(local: URL) {
         self.local = local
-        self.output = output
-        self.verbose = verbose
+        self.verboseEnabled = false
     }
 
     public init(fromCommandLine arguments: [String]) {
@@ -42,8 +39,7 @@ public struct InstalledPackage {
         let localURL = URL(fileURLWithPath: localPath)
 
         self.local = localURL
-        self.output = Channel.stdout
-        self.verbose = Channel("verbose")
+        self.verboseEnabled = arguments.contains("--verbose")
     }
 
     public func actionName(fromCommandLine arguments: [String]) -> String {
@@ -56,7 +52,7 @@ public struct InstalledPackage {
 
     public func performAction(fromCommandLine arguments: [String], links: [ManifestLink], commands: [ManifestLink] = []) throws {
         guard let action = action(fromCommandLine: arguments) else {
-            output.log("Unrecognised action \(actionName(fromCommandLine: arguments)).")
+            output("Unrecognised action \(actionName(fromCommandLine: arguments)).")
             return
         }
 
@@ -72,22 +68,34 @@ public struct InstalledPackage {
     }
 
     public func output(_ message: String) {
-        output.log(message)
+        print(message)
     }
 
     public func verbose(_ message: String) {
-        verbose.log(message)
+        if verboseEnabled {
+            print(message)
+        }
+    }
+
+    public func output<S: CustomStringConvertible>(_ object: S) {
+        print(object.description)
+    }
+
+    public func verbose<S: CustomStringConvertible>(_ object: S) {
+        if verboseEnabled {
+            print(object.description)
+        }
     }
 
     public func error(_ message: String, _ error: Error?) {
-        output.log(message)
+        output(message)
         if let error = error {
-            verbose.log(error)
+            verbose("\(error)")
         }
     }
 
     public func fail(_ message: String, code: Int32) -> Never {
-        output.log(message)
+        output(message)
         exit(code)
     }
 
@@ -131,7 +139,7 @@ public struct InstalledPackage {
             link = URL(expandedFilePath: spec[1])
         }
         let resolved = (name, link, linked)
-        verbose.log("resolved \(spec) as \(resolved)")
+        verbose("resolved \(spec) as \(resolved)")
         return resolved
     }
 
@@ -141,12 +149,12 @@ public struct InstalledPackage {
     /// - Parameter cleanup: A cleanup block to run on failed.
     /// - Parameter block: The block to attempt.
     public func attempt(action: String, cleanup: (() throws -> Void)? = nil, block: () throws -> Void) {
-        verbose.log(action)
+        verbose(action)
         do {
             try block()
         } catch {
             try? cleanup?()
-            output.log("\(action) failed.\n\(error)")
+            output("\(action) failed.\n\(error)")
         }
     }
 
@@ -226,9 +234,9 @@ public struct InstalledPackage {
         let runner = Runner(for: executable, cwd: local)
         let result = try runner.sync(arguments: args, stdoutMode: .passthrough)
         if result.status == 0 {
-            output.log(result.stdout)
+            output(result.stdout)
         } else {
-            output.log("Failed to run \(command).\n\n\(result.status) \(result.stdout) \(result.stderr)")
+            output("Failed to run \(command).\n\n\(result.status) \(result.stdout) \(result.stderr)")
         }
     }
 
@@ -249,10 +257,10 @@ public struct InstalledPackage {
                     manageLinks(removing: manifest.links)
 
                 default:
-                    output.log("Unknown action \(action).")
+                    output("Unknown action \(action).")
             }
         } else {
-            output.log("Couldn't decode manifest.")
+            output("Couldn't decode manifest.")
         }
     }
 
@@ -270,7 +278,7 @@ public struct InstalledPackage {
                         case "link": manageLinks(creating: [arguments])
                         case "unlink": manageLinks(removing: [arguments])
                         default:
-                            verbose.log("running \(tool)")
+                            verbose("running \(tool)")
                             try external(command: tool, arguments: arguments)
                     }
                 }

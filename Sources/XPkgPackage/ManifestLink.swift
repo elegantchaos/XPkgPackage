@@ -54,7 +54,7 @@ public struct ManifestLink {
         let name = linked.lastPathComponent
         let link = destination.map { URL(expandedFilePath: $0) } ?? package.binURL.appendingPathComponent(name).deletingPathExtension()
         let resolved = ResolvedLink(name: name, source: linked, destination: link)
-        package.verbose.log("resolved \(self) as \(resolved)")
+        package.verbose("resolved \(self) as \(resolved)")
         return resolved
     }
 }

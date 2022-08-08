@@ -4,7 +4,6 @@
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 import Foundation
-import Logger
 import Runner
 
 public struct Package {
@@ -13,8 +12,7 @@ public struct Package {
     public typealias FishFunctions = [FishFunction]
 
     public let local: URL
-    let output: Channel
-    let verbose: Channel
+    let verboseEnabled: Bool
     let arguments: [String]
 
     public init(arguments: [String] = CommandLine.arguments) {
@@ -28,11 +26,8 @@ public struct Package {
         let localURL = URL(fileURLWithPath: localPath)
 
         self.local = localURL
-        self.output = Channel.stdout
-        self.verbose = arguments.contains("--verbose") ? Channel.stdout : Channel("verbose")
-        
+        self.verboseEnabled = arguments.contains("--verbose")
         self.arguments = arguments
-        self.verbose("verbose mode enabled")
     }
 
     public var actionName: String {
@@ -45,7 +40,7 @@ public struct Package {
 
     @discardableResult public func run(links: [ManifestLink], commands: [ManifestCommand] = []) throws -> Action {
         guard let action = action else {
-            output.log("Unrecognised action \(actionName).")
+            output("Unrecognised action \(actionName).")
             throw PackageError.unknownCommand
         }
 
@@ -63,22 +58,24 @@ public struct Package {
     }
 
     public func output(_ message: String) {
-        output.log(message)
+        print(message)
     }
 
     public func verbose(_ message: String) {
-        verbose.log(message)
+        if verboseEnabled {
+            print(message)
+        }
     }
 
     public func error(_ message: String, _ error: Error?) {
-        output.log(message)
+        output(message)
         if let error = error {
-            verbose.log(error)
+            verbose("\(error)")
         }
     }
 
     public func fail(_ message: String, code: Int32) -> Never {
-        output.log(message)
+        output(message)
         exit(code)
     }
 
@@ -122,7 +119,7 @@ public struct Package {
             link = URL(expandedFilePath: spec[1])
         }
         let resolved = (name, link, linked)
-        verbose.log("resolved \(spec) as \(resolved)")
+        verbose("resolved \(spec) as \(resolved)")
         return resolved
     }
 
@@ -132,12 +129,12 @@ public struct Package {
     /// - Parameter cleanup: A cleanup block to run on failed.
     /// - Parameter block: The block to attempt.
     public func attempt(action: String, cleanup: (() throws -> Void)? = nil, block: () throws -> Void) {
-        verbose.log(action)
+        verbose(action)
         do {
             try block()
         } catch {
             try? cleanup?()
-            output.log("\(action) failed.\n\(error)")
+            output("\(action) failed.\n\(error)")
         }
     }
 
@@ -217,9 +214,9 @@ public struct Package {
         let runner = Runner(for: executable, cwd: local)
         let result = try runner.sync(arguments: args, stdoutMode: .passthrough)
         if result.status == 0 {
-            output.log(result.stdout)
+            output(result.stdout)
         } else {
-            output.log("Failed to run \(command).\n\n\(result.status) \(result.stdout) \(result.stderr)")
+            output("Failed to run \(command).\n\n\(result.status) \(result.stdout) \(result.stderr)")
         }
     }
 
@@ -237,7 +234,7 @@ public struct Package {
                         case "link": manageLinks(creating: [ManifestLink(arguments)])
                         case "unlink": manageLinks(removing: [ManifestLink(arguments)])
                         default:
-                            verbose.log("running \(tool)")
+                            verbose("running \(tool)")
                             try external(command: tool, arguments: arguments)
                     }
                 }

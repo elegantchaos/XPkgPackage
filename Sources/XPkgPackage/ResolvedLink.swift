@@ -13,6 +13,6 @@ public struct ResolvedLink {
 
 extension ResolvedLink: CustomStringConvertible {
     public var description: String {
-        return "\(name): \(source.path) -> \(destination.path)"
+        return "\(source.path) -> \(destination.path)"
     }
 }

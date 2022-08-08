@@ -30,6 +30,11 @@ public struct Package {
         self.local = localURL
         self.output = Logger.stdout
         self.verbose = Channel("verbose")
+        
+        if arguments.contains("--verbose") {
+            verbose.enabled = true
+        }
+        
         self.arguments = arguments
     }
 

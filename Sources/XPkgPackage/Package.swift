@@ -28,14 +28,11 @@ public struct Package {
         let localURL = URL(fileURLWithPath: localPath)
 
         self.local = localURL
-        self.output = Logger.stdout
-        self.verbose = Channel("verbose")
-        
-        if arguments.contains("--verbose") {
-            verbose.enabled = true
-        }
+        self.output = Channel.stdout
+        self.verbose = arguments.contains("--verbose") ? Channel.stdout : Channel("verbose")
         
         self.arguments = arguments
+        self.verbose("verbose mode enabled")
     }
 
     public var actionName: String {

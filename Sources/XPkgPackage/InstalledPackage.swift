@@ -42,7 +42,7 @@ public struct InstalledPackage {
         let localURL = URL(fileURLWithPath: localPath)
 
         self.local = localURL
-        self.output = Logger.stdout
+        self.output = Channel.stdout
         self.verbose = Channel("verbose")
     }
 
